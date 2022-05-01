@@ -33,21 +33,37 @@ const (
 var operation_names = [256]string{
 	"BRK", "ORA", "NONE", "NONE", "NONE", "ORA", "ASL", "NONE",
 	"PHP", "ORA", "ASL", "NONE", "NONE", "ORA", "ASL", "NONE",
+	"BPL", "ORA", "NONE", "NONE", "NONE", "ORA", "ASL", "NONE",
+	"CLC", "ORA", "NONE", "NONE", "NONE", "ORA", "ASL", "NONE",
+	"JSR", "AND", "NONE", "NONE", "BIT", "AND", "ROL", "NONE",
+	"PLP", "AND", "POL", "NONE", "BIT", "AND", "ROL", "NONE",
 }
 
 var operation_sizes = [256]int{
 	1, 2, 0, 0, 0, 2, 2, 0,
 	1, 2, 1, 0, 0, 3, 3, 0,
+	2, 2, 0, 0, 0, 2, 2, 0,
+	1, 3, 0, 0, 0, 3, 3, 0,
+	3, 2, 0, 0, 2, 2, 2, 0,
+	1, 2, 1, 0, 3, 3, 3, 0,
 }
 
 var operation_modes = [256]int{
 	modeImplied, modeIndirectX, 0, 0, 0, modeZeroPage, modeZeroPage, 0,
 	modeImplied, modeImmediate, modeAccumulator, 0, 0, modeAbsolute, modeAbsolute, 0,
+	modeRelative, modeIndirectY, 0, 0, 0, modeZeroPageX, modeZeroPageX, 0,
+	modeImplied, modeAbsoluteX, 0, 0, 0, modeAbsoluteX, modeAbsoluteX, 0,
+	modeAbsolute, modeIndirectX, 0, 0, modeZeroPage, modeZeroPage, modeZeroPage, 0,
+	modeImplied, modeImmediate, modeAccumulator, 0, modeAbsolute, modeAbsolute, modeAbsolute, 0,
 }
 
 var operation_cycles = [256]int{
 	7, 6, 0, 0, 0, 3, 5, 0,
 	3, 2, 2, 0, 0, 4, 6, 0,
+	2, 5, 0, 0, 0, 4, 6, 0,
+	2, 4, 0, 0, 0, 4, 7, 0,
+	6, 6, 0, 0, 3, 3, 5, 0,
+	4, 2, 2, 0, 4, 4, 6, 0,
 }
 
 type CPU struct {
