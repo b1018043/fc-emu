@@ -41,8 +41,8 @@ func parseROMBuffer(bytes []byte) ([]byte, []byte) {
 	progROMPages := int(bytes[4])
 	charROMStart := NES_HEADER_SIZE + progROMPages*PROG_ROM_PAGE_SIZE
 	charROMEnd := charROMStart + charROMPages*CHAR_ROM_PAGE_SIZE
-	progROM := bytes[NES_HEADER_SIZE : charROMStart-1]
-	charROM := bytes[charROMStart : charROMEnd-1]
+	progROM := bytes[NES_HEADER_SIZE:charROMStart]
+	charROM := bytes[charROMStart:charROMEnd]
 
 	return progROM, charROM
 }
