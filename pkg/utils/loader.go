@@ -13,27 +13,27 @@ const (
 )
 
 // param: filename ret: progROM charROM error
-func LoadFCROM(filename string) ([]byte, []byte, error) {
+func LoadFCROM(filename string) (int, []byte, []byte, error) {
 	file, err := os.Open(filename)
 	if err != nil {
-		return nil, nil, err
+		return 0, nil, nil, err
 	}
 	defer file.Close()
 	stats, err := file.Stat()
 	if err != nil {
-		return nil, nil, err
+		return 0, nil, nil, err
 	}
 	size := stats.Size()
 	bytes := make([]byte, size)
 	b := bufio.NewReader(file)
 	_, err = b.Read(bytes)
 	if err != nil {
-		return nil, nil, err
+		return 0, nil, nil, err
 	}
 
 	progROM, charROM := parseROMBuffer(bytes)
 
-	return progROM, charROM, nil
+	return int(bytes[5]), progROM, charROM, nil
 }
 
 func parseROMBuffer(bytes []byte) ([]byte, []byte) {
