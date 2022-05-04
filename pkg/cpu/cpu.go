@@ -1,5 +1,7 @@
 package cpu
 
+import "log"
+
 // Interrupt type
 const (
 	_ = iota
@@ -114,12 +116,23 @@ type CPU struct {
 
 // レジスタ内容に関しては http://hp.vector.co.jp/authors/VA042397/nes/6502.html を参照
 type Registers struct {
-	A  uint8  // アキュムレーター
-	X  uint8  // インデックスレジスタ
-	Y  uint8  // インデックスレジスタ
-	S  uint16 // スタックポインタ 上位8bitは0x01で固定 7:N 6:V 5:R=1 4:B 3:D 2:I 1:Z 0:C
-	P  uint8  // ステータスレジスタ
-	PC uint16 // プログラムカウンタ
+	A  byte           // アキュムレーター
+	X  byte           // インデックスレジスタ
+	Y  byte           // インデックスレジスタ
+	S  uint16         // スタックポインタ
+	P  statusRegister // ステータスレジスタ 上位8bitは0x01で固定 7:N 6:V 5:R=1 4:B 3:D 2:I 1:Z 0:C
+	PC uint16         // プログラムカウンタ
+}
+
+type statusRegister struct {
+	N bool // 演算結果がマイナス(bit7=1)の時にセット
+	V bool // オーバーフロー時にセット
+	R bool // 予約済み 常にtrue
+	B bool // ブレークモード BRK発生時にtrue,IRQ発生時にfalseにセット
+	D bool // D とりあえず falseにする
+	I bool // false IRQ許可 true IRQ禁止
+	Z bool // 演算結果が0の時にtrue
+	C bool // キャリー発生時にtrue
 }
 
 func NewCPU() *CPU {
@@ -132,11 +145,20 @@ func NewCPU() *CPU {
 
 func NewRegisters() *Registers {
 	return &Registers{
-		A:  0x00,
-		X:  0x00,
-		Y:  0x00,
-		S:  0x01FD,
-		P:  0 | (1 << 5) | (1 << 4) | (1 << 2),
+		A: 0x00,
+		X: 0x00,
+		Y: 0x00,
+		S: 0x01FD,
+		P: statusRegister{
+			N: false,
+			V: false,
+			R: true,
+			B: true,
+			D: false,
+			I: true,
+			Z: false,
+			C: false,
+		},
 		PC: 0x8000,
 	}
 }
@@ -158,11 +180,93 @@ func (c *CPU) Pop() uint8 {
 
 func (c *CPU) Reset() {
 	c.Registers = Registers{
-		A:  0x00,
-		X:  0x00,
-		Y:  0x00,
-		S:  0x01FD,
-		P:  0 | (1 << 5) | (1 << 4) | (1 << 2),
+		A: 0x00,
+		X: 0x00,
+		Y: 0x00,
+		S: 0x01FD,
+		P: statusRegister{
+			N: false,
+			V: false,
+			R: true,
+			B: true,
+			D: false,
+			I: true,
+			Z: false,
+			C: false,
+		},
 		PC: 0xFFFC,
+	}
+}
+
+func (c *CPU) exec(opecode int) {
+	switch operation_names[opecode] {
+	case "LDA":
+	case "LDX":
+	case "LDY":
+	case "STA":
+	case "STX":
+	case "STY":
+	case "TAX":
+	case "TAY":
+	case "TXS":
+	case "TYA":
+	case "ADC":
+	case "AND":
+	case "ASL":
+	case "BIT":
+	case "CMP":
+	case "CPX":
+	case "CPY":
+	case "DEC":
+	case "DEX":
+	case "DEY":
+	case "EOR":
+	case "INC":
+	case "INX":
+	case "INY":
+	case "LSR":
+	case "ORA":
+	case "ROL":
+	case "ROR":
+	case "SBC":
+	case "PHA":
+	case "PHP":
+	case "PLA":
+	case "PLP":
+	case "JMP":
+	case "JSR":
+	case "RTS":
+	case "RTI":
+	case "BCC":
+	case "BCS":
+	case "BEQ":
+	case "BMI":
+	case "BNE":
+	case "BPL":
+	case "BVC":
+	case "BVS":
+	case "CLC":
+		c.P.C = false
+	case "CLD":
+		// nothing to do
+	case "CLI":
+		c.P.I = false
+	case "CLV":
+		c.P.V = true
+	case "SEC":
+		c.P.C = true
+	case "SED":
+		// nothing to do
+	case "SEI":
+		c.P.I = true
+	case "BRK":
+		c.Interrupt = BRK
+		c.P.B = true
+	case "NOP":
+		// nothing to do
+	default:
+		if operation_names[opecode] != "NONE" {
+			log.Printf("%s operation called, but not implemented.\n", operation_names[opecode])
+		}
 	}
 }
