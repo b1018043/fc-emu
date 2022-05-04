@@ -198,6 +198,48 @@ func (c *CPU) Reset() {
 	}
 }
 
+// TODO: アドレスの取得処理を追加して置き換える
+func (c *CPU) detectAddress(opecode int, address uint16) uint16 {
+	mode := operation_modes[opecode]
+	switch mode {
+	case modeAbsolute:
+		return uint16(c.MemoryMap[c.PC]) | uint16(c.MemoryMap[c.PC+1])<<8
+	case modeAbsoluteX:
+		return (uint16(c.MemoryMap[c.PC]) | uint16(c.MemoryMap[c.PC+1])<<8) + uint16(c.X)
+	case modeAbsoluteY:
+		return (uint16(c.MemoryMap[c.PC]) | uint16(c.MemoryMap[c.PC+1])<<8) + uint16(c.Y)
+	case modeAccumulator:
+		return 0
+	case modeImmediate:
+		return c.PC
+	case modeImplied:
+		return 0
+	case modeIndirect:
+		abs := uint16(c.MemoryMap[c.PC]) | (uint16(c.MemoryMap[c.PC+1]) << 8)
+		return uint16(c.MemoryMap[abs]) | (uint16(c.MemoryMap[abs+1]) << 8)
+	case modeIndirectX:
+		t := uint16(c.MemoryMap[c.PC]) + uint16(c.X)
+		return uint16(c.MemoryMap[t]) | uint16(c.MemoryMap[t+1])<<8
+	case modeIndirectY:
+		t := uint16(c.MemoryMap[c.PC])
+		return (uint16(c.MemoryMap[t]) | (uint16(c.MemoryMap[t+1]) << 8)) + uint16(c.Y)
+	case modeRelative:
+		offset := uint16(c.MemoryMap[c.PC])
+		var t uint16 = 0
+		if offset >= 0x80 {
+			t = 0x100
+		}
+		return c.PC + 1 + offset - t
+	case modeZeroPage:
+		return uint16(c.MemoryMap[c.PC])
+	case modeZeroPageX:
+		return uint16(c.MemoryMap[c.PC]) + uint16(c.X)
+	case modeZeroPageY:
+		return uint16(c.MemoryMap[c.PC]) + uint16(c.Y)
+	}
+	return 1
+}
+
 func (c *CPU) exec(opecode int) {
 	switch operation_names[opecode] {
 	case "LDA":
