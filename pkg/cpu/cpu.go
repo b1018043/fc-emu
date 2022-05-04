@@ -163,19 +163,99 @@ func NewRegisters() *Registers {
 	}
 }
 
+func (c *CPU) getAddress(addr uint16) uint16 {
+	return uint16(c.MemoryMap[addr]) | (uint16(c.MemoryMap[addr+1]) << 8)
+}
+
+func (c *CPU) setAddress(addr, val uint16) {
+	c.MemoryMap[addr] = byte(val)
+	c.MemoryMap[addr+1] = byte(val >> 8)
+}
+
 func (c *CPU) Push(v uint8) {
 	// 本来 0x0100以下には入らない
-	if c.Registers.S < 0x0100 {
+	if c.S < 0x0100 {
 		// TODO: なんか処理をかく
 		return
 	}
-	c.MemoryMap[c.Registers.S] = v
-	c.Registers.S--
+	c.MemoryMap[c.S] = v
+	c.S--
+}
+
+func (c *CPU) PushAddress(val uint16) {
+	if c.S < 0x100 {
+		return
+	}
+	c.setAddress(c.S-1, val)
+	c.S -= 2
+}
+
+func (c *CPU) PushStatusRegister() {
+	var t uint8 = 0
+	if c.P.N {
+		t |= 1 << 7
+	}
+	if c.P.V {
+		t |= 1 << 6
+	}
+	if c.P.R {
+		t |= 1 << 5
+	}
+	if c.P.B {
+		t |= 1 << 4
+	}
+	if c.P.D {
+		t |= 1 << 3
+	}
+	if c.P.I {
+		t |= 1 << 2
+	}
+	if c.P.Z {
+		t |= 1 << 1
+	}
+	if c.P.C {
+		t |= 1 << 0
+	}
+	c.Push(t)
 }
 
 func (c *CPU) Pop() uint8 {
 	c.Registers.S++
-	return c.MemoryMap[c.Registers.S]
+	return c.MemoryMap[c.S]
+}
+
+func (c *CPU) PopAddress() uint16 {
+	addr := c.getAddress(c.S + 1)
+	c.S += 2
+	return addr
+}
+
+func (c *CPU) PopStatusRegister() {
+	t := c.Pop()
+	if t>>7&1 != 0 {
+		c.P.N = true
+	}
+	if t>>6&1 != 0 {
+		c.P.V = true
+	}
+	if t>>5&1 != 0 {
+		c.P.R = true
+	}
+	if t>>4&1 != 0 {
+		c.P.B = true
+	}
+	if t>>3&1 != 0 {
+		c.P.D = true
+	}
+	if t>>2&1 != 0 {
+		c.P.I = true
+	}
+	if t>>1&1 != 0 {
+		c.P.Z = true
+	}
+	if t&1 != 0 {
+		c.P.C = true
+	}
 }
 
 func (c *CPU) Reset() {
@@ -199,8 +279,7 @@ func (c *CPU) Reset() {
 }
 
 // TODO: アドレスの取得処理を追加して置き換える
-func (c *CPU) detectAddress(opecode int, address uint16) uint16 {
-	mode := operation_modes[opecode]
+func (c *CPU) detectAddress(mode int) uint16 {
 	switch mode {
 	case modeAbsolute:
 		return uint16(c.MemoryMap[c.PC]) | uint16(c.MemoryMap[c.PC+1])<<8
@@ -241,8 +320,15 @@ func (c *CPU) detectAddress(opecode int, address uint16) uint16 {
 	return 1
 }
 
-func (c *CPU) exec(opecode int) {
-	address := c.detectAddress(opecode, c.PC)
+func (c *CPU) Run() {
+	opecode := c.MemoryMap[c.PC]
+	c.PC++
+	address := c.detectAddress(operation_modes[opecode])
+	c.PC += uint16(operation_sizes[opecode] - 1)
+	c.exec(opecode, address)
+}
+
+func (c *CPU) exec(opecode byte, address uint16) {
 	c.PC += uint16(operation_sizes[opecode])
 	switch operation_names[opecode] {
 	case "LDA":
@@ -279,9 +365,16 @@ func (c *CPU) exec(opecode int) {
 	case "PLA":
 	case "PLP":
 	case "JMP":
+		c.PC = address
 	case "JSR":
+		// NOTE: JSR命令の最後のアドレスを格納する
+		c.PushAddress(c.PC - 1)
+		c.PC = address
 	case "RTS":
+		c.PC = c.PopAddress() + 1
 	case "RTI":
+		c.PopStatusRegister()
+		c.PC = c.PopAddress()
 	case "BCC":
 		if !c.P.C {
 			c.PC = address
