@@ -44,6 +44,10 @@ var operation_names = [256]string{
 	"TYA", "STA", "TXS", "NONE", "NONE", "STA", "NONE", "NONE",
 	"LDY", "LDA", "LDX", "NONE", "LDY", "LDA", "LDX", "NONE",
 	"TAY", "LDA", "TAX", "NONE", "LDY", "LDA", "LDX", "NONE",
+	"BCS", "LDA", "NONE", "NONE", "LDY", "LDA", "LDX", "NONE",
+	"CLV", "LDA", "TSX", "NONE", "LDY", "LDA", "LDX", "NONE",
+	"CPY", "CMP", "NONE", "NONE", "CPY", "CMP", "DEC", "NONE",
+	"INY", "CMP", "DEX", "NONE", "CPY", "CMP", "DEC", "NONE",
 }
 
 var operation_sizes = [256]int{
@@ -59,6 +63,10 @@ var operation_sizes = [256]int{
 	2, 2, 0, 0, 2, 2, 2, 0,
 	1, 3, 1, 0, 0, 3, 0, 0,
 	2, 2, 2, 0, 2, 2, 2, 0,
+	1, 2, 1, 0, 3, 3, 3, 0,
+	2, 2, 0, 0, 2, 2, 2, 0,
+	1, 3, 1, 0, 3, 3, 3, 0,
+	2, 2, 0, 0, 2, 2, 2, 0,
 	1, 2, 1, 0, 3, 3, 3, 0,
 }
 
@@ -76,6 +84,10 @@ var operation_modes = [256]int{
 	modeImplied, modeAbsoluteY, modeImplied, 0, 0, modeAbsoluteX, 0, 0,
 	modeImmediate, modeIndirectX, modeImmediate, 0, modeZeroPage, modeZeroPage, modeZeroPage, 0,
 	modeImplied, modeImmediate, modeImplied, 0, modeAbsolute, modeAbsolute, modeAbsolute, 0,
+	modeRelative, modeIndirectY, 0, 0, modeZeroPageX, modeZeroPageX, modeZeroPageY, 0,
+	modeImplied, modeAbsoluteY, modeImplied, 0, modeAbsoluteX, modeAbsoluteX, modeAbsoluteY, 0,
+	modeImmediate, modeIndirectX, 0, 0, modeZeroPage, modeZeroPage, modeZeroPage, 0,
+	modeImplied, modeImmediate, modeImplied, 0, modeAbsolute, modeAbsolute, modeAbsolute, 0,
 }
 
 var operation_cycles = [256]int{
@@ -92,6 +104,10 @@ var operation_cycles = [256]int{
 	2, 5, 2, 0, 0, 5, 0, 0,
 	2, 6, 2, 0, 3, 3, 3, 0,
 	2, 2, 2, 0, 4, 4, 4, 0,
+	2, 5, 0, 0, 4, 4, 4, 0,
+	2, 4, 2, 0, 4, 4, 4, 0,
+	2, 6, 0, 0, 3, 3, 5, 0,
+	2, 2, 2, 0, 4, 4, 6, 0,
 }
 
 type CPU struct {
