@@ -237,10 +237,13 @@ func (c *CPU) detectAddress(opecode int, address uint16) uint16 {
 	case modeZeroPageY:
 		return uint16(c.MemoryMap[c.PC]) + uint16(c.Y)
 	}
+	log.Println("unknown operation mode")
 	return 1
 }
 
 func (c *CPU) exec(opecode int) {
+	address := c.detectAddress(opecode, c.PC)
+	c.PC += uint16(operation_sizes[opecode])
 	switch operation_names[opecode] {
 	case "LDA":
 	case "LDX":
@@ -280,13 +283,37 @@ func (c *CPU) exec(opecode int) {
 	case "RTS":
 	case "RTI":
 	case "BCC":
+		if !c.P.C {
+			c.PC = address
+		}
 	case "BCS":
+		if c.P.C {
+			c.PC = address
+		}
 	case "BEQ":
+		if c.P.Z {
+			c.PC = address
+		}
 	case "BMI":
+		if c.P.N {
+			c.PC = address
+		}
 	case "BNE":
+		if !c.P.Z {
+			c.PC = address
+		}
 	case "BPL":
+		if !c.P.N {
+			c.PC = address
+		}
 	case "BVC":
+		if !c.P.V {
+			c.PC = address
+		}
 	case "BVS":
+		if c.P.V {
+			c.PC = address
+		}
 	case "CLC":
 		c.P.C = false
 	case "CLD":
