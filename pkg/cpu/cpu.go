@@ -361,9 +361,20 @@ func (c *CPU) exec(opecode byte, address uint16) {
 	case "ROR":
 	case "SBC":
 	case "PHA":
+		c.Push(c.A)
 	case "PHP":
+		c.PushStatusRegister()
 	case "PLA":
+		v := c.Pop()
+		c.A = v
+		if v == 0 {
+			c.P.Z = true
+		}
+		if v&1<<7 != 0 {
+			c.P.N = true
+		}
 	case "PLP":
+		c.PopStatusRegister()
 	case "JMP":
 		c.PC = address
 	case "JSR":
