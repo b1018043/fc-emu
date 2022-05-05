@@ -333,12 +333,13 @@ func (c *CPU) detectAddress(mode int) uint16 {
 	return 1
 }
 
-func (c *CPU) Run() {
+func (c *CPU) Run() int {
 	opecode := c.MemoryMap[c.PC]
 	c.PC++
 	address := c.detectAddress(operation_modes[opecode])
 	c.PC += uint16(operation_sizes[opecode] - 1)
 	c.exec(opecode, address)
+	return operation_cycles[opecode]
 }
 
 func (c *CPU) exec(opecode byte, address uint16) {
