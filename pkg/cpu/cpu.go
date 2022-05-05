@@ -35,6 +35,10 @@ const (
 	modeIndirectY = modeIndirectIndexed
 )
 
+const (
+	stackStart = 0x0100
+)
+
 // TODO:命令がNONEの部分は変えていく
 var operation_names = [256]string{
 	"BRK", "ORA", "NONE", "NONE", "NONE", "ORA", "ASL", "NONE", "PHP", "ORA", "ASL", "NONE", "NONE", "ORA", "ASL", "NONE",
@@ -123,7 +127,7 @@ type Registers struct {
 	A  byte           // アキュムレーター
 	X  byte           // インデックスレジスタ
 	Y  byte           // インデックスレジスタ
-	S  uint16         // スタックポインタ
+	S  byte           // スタックポインタレジスタ スタックポインタは0x01|S
 	P  statusRegister // ステータスレジスタ 上位8bitは0x01で固定 7:N 6:V 5:R=1 4:B 3:D 2:I 1:Z 0:C
 	PC uint16         // プログラムカウンタ
 }
@@ -152,7 +156,7 @@ func NewRegisters() *Registers {
 		A: 0x00,
 		X: 0x00,
 		Y: 0x00,
-		S: 0x01FD,
+		S: 0xFD,
 		P: statusRegister{
 			N: false,
 			V: false,
@@ -178,7 +182,7 @@ func (c *CPU) setAddress(addr, val uint16) {
 
 func (c *CPU) Push(v uint8) {
 	// 本来 0x0100以下には入らない
-	if c.S < 0x0100 {
+	if c.S < 0 {
 		// TODO: なんか処理をかく
 		return
 	}
@@ -187,10 +191,10 @@ func (c *CPU) Push(v uint8) {
 }
 
 func (c *CPU) PushAddress(val uint16) {
-	if c.S < 0x100 {
+	if c.S < 0 {
 		return
 	}
-	c.setAddress(c.S-1, val)
+	c.setAddress(stackStart|uint16(c.S-1), val)
 	c.S -= 2
 }
 
@@ -229,7 +233,7 @@ func (c *CPU) Pop() uint8 {
 }
 
 func (c *CPU) PopAddress() uint16 {
-	addr := c.getAddress(c.S + 1)
+	addr := c.getAddress(stackStart | uint16(c.S+1))
 	c.S += 2
 	return addr
 }
@@ -272,7 +276,7 @@ func (c *CPU) Reset() {
 		A: 0x00,
 		X: 0x00,
 		Y: 0x00,
-		S: 0x01FD,
+		S: 0xFD,
 		P: statusRegister{
 			N: false,
 			V: false,
@@ -341,15 +345,38 @@ func (c *CPU) exec(opecode byte, address uint16) {
 	c.PC += uint16(operation_sizes[opecode])
 	switch operation_names[opecode] {
 	case "LDA":
+		c.A = c.MemoryMap[address]
+		c.SetZN(c.A)
 	case "LDX":
+		c.X = c.MemoryMap[address]
+		c.SetZN(c.X)
 	case "LDY":
+		c.Y = c.MemoryMap[address]
+		c.SetZN(c.Y)
 	case "STA":
+		c.MemoryMap[address] = c.A
 	case "STX":
+		c.MemoryMap[address] = c.X
 	case "STY":
+		c.MemoryMap[address] = c.Y
 	case "TAX":
+		c.X = c.A
+		c.SetZN(c.X)
 	case "TAY":
+		c.Y = c.A
+		c.SetZN(c.Y)
+	case "TSX":
+		c.X = c.S
+		c.SetZN(c.X)
+	case "TXA":
+		c.A = c.X
+		c.SetZN(c.A)
 	case "TXS":
+		c.S = c.X
+		c.SetZN(c.S)
 	case "TYA":
+		c.A = c.Y
+		c.SetZN(c.A)
 	case "ADC":
 		v1 := c.A
 		v2 := c.MemoryMap[address]
