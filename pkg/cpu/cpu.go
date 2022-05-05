@@ -1,6 +1,10 @@
 package cpu
 
-import "log"
+import (
+	"log"
+
+	"github.com/b1018043/fc-emu/pkg/utils"
+)
 
 // Interrupt type
 const (
@@ -258,6 +262,11 @@ func (c *CPU) PopStatusRegister() {
 	}
 }
 
+func (c *CPU) SetZN(val uint8) {
+	c.P.Z = val == 0
+	c.P.N = utils.IsNegativeByte(val)
+}
+
 func (c *CPU) Reset() {
 	c.Registers = Registers{
 		A: 0x00,
@@ -342,24 +351,157 @@ func (c *CPU) exec(opecode byte, address uint16) {
 	case "TXS":
 	case "TYA":
 	case "ADC":
+		v1 := c.A
+		v2 := c.MemoryMap[address]
+		var v3 byte
+		if c.P.C {
+			v3 = 0
+		} else {
+			v3 = 1
+		}
+		c.A = v1 + v2 + v3
+
+		c.SetZN(c.A)
+
+		// v1 v2の符号が同じ && v1と演算結果の符号が異なる
+		c.P.V = (!((v1^v2)&0x80 != 0)) && ((c.A^v1)&0x80 != 1)
+		c.P.C = int(v1)+int(v2)+int(v3) > 0xFF
 	case "AND":
+		c.A &= c.MemoryMap[address]
+		c.SetZN(c.A)
 	case "ASL":
+		var v uint8
+		if operation_modes[opecode] == modeAccumulator {
+			v = c.A
+		} else {
+			v = c.MemoryMap[address]
+		}
+		c.P.C = (v>>7)&1 != 0
+		v <<= 1
+
+		c.SetZN(v)
+
+		if operation_modes[opecode] == modeAccumulator {
+			c.A = v
+		} else {
+			c.MemoryMap[address] = v
+		}
 	case "BIT":
+		v := c.MemoryMap[address]
+		c.P.N = utils.IsNegativeByte(v)
+		c.P.V = (v>>6&1 != 0)
+		c.P.Z = v&c.A == 0
 	case "CMP":
+		v := c.A - c.MemoryMap[address]
+		c.P.C = !utils.IsNegativeByte(v)
+		c.SetZN(v)
 	case "CPX":
+		v := c.X - c.MemoryMap[address]
+		c.P.C = !utils.IsNegativeByte(v)
+		c.SetZN(v)
 	case "CPY":
+		v := c.Y - c.MemoryMap[address]
+		// P.Zがtrueであれば等しい、P.C がtrueであればc.Yの方が大きい、P.Nがtrueであればアドレスで示された値が大きい
+		c.P.C = !utils.IsNegativeByte(v)
+		c.SetZN(v)
 	case "DEC":
+		c.MemoryMap[address]--
+		c.SetZN(c.MemoryMap[address])
 	case "DEX":
+		c.X--
+		c.SetZN(c.X)
 	case "DEY":
+		c.Y--
+		c.SetZN(c.Y)
 	case "EOR":
+		c.A ^= c.MemoryMap[address]
+		c.SetZN(c.A)
 	case "INC":
+		c.MemoryMap[address]++
+		c.SetZN(c.MemoryMap[address])
 	case "INX":
+		c.X++
+		c.SetZN(c.X)
 	case "INY":
+		c.Y++
+		c.SetZN(c.Y)
 	case "LSR":
+		var v uint8
+		if operation_modes[opecode] == modeAccumulator {
+			v = c.A
+		} else {
+			v = c.MemoryMap[address]
+		}
+		c.P.C = v&1 != 0
+		v >>= 1
+
+		c.SetZN(v)
+
+		if operation_modes[opecode] == modeAccumulator {
+			c.A = v
+		} else {
+			c.MemoryMap[address] = v
+		}
 	case "ORA":
+		c.A |= c.MemoryMap[address]
+		c.SetZN(c.A)
 	case "ROL":
+		var v uint8
+		if operation_modes[opecode] == modeAccumulator {
+			v = c.A
+		} else {
+			v = c.MemoryMap[address]
+		}
+
+		carry := (v & 0x80) >> 7
+		v <<= 1
+		v |= carry
+		c.P.C = (carry != 0)
+		c.SetZN(v)
+
+		if operation_modes[opecode] == modeAccumulator {
+			c.A = v
+		} else {
+			c.MemoryMap[address] = v
+		}
+
 	case "ROR":
+		var v uint8
+		if operation_modes[opecode] == modeAccumulator {
+			v = c.A
+		} else {
+			v = c.MemoryMap[address]
+		}
+
+		carry := v & 1
+		v >>= 1
+		v |= carry << 7
+		c.P.C = (carry != 0)
+
+		c.SetZN(v)
+
+		if operation_modes[opecode] == modeAccumulator {
+			c.A = v
+		} else {
+			c.MemoryMap[address] = v
+		}
 	case "SBC":
+		v1 := c.A
+		v2 := c.MemoryMap[address]
+		var v3 byte
+		if c.P.C {
+			v3 = 0
+		} else {
+			v3 = 1
+		}
+		c.A = v1 - v2 - v3
+		// c.a + v2 = v1 (v3は無視) が成り立ち、c.aとv2のどちらもv1と符号が異なればオーバーフロー
+		// NOTE: これであっているか不安
+		c.P.V = utils.IsNegativeByte(v1^v2) && utils.IsNegativeByte(v1^c.A)
+
+		c.SetZN(c.A)
+
+		c.P.C = int(v1)-int(v2)-int(v3) < 0x00
 	case "PHA":
 		c.Push(c.A)
 	case "PHP":
@@ -367,12 +509,7 @@ func (c *CPU) exec(opecode byte, address uint16) {
 	case "PLA":
 		v := c.Pop()
 		c.A = v
-		if v == 0 {
-			c.P.Z = true
-		}
-		if v&1<<7 != 0 {
-			c.P.N = true
-		}
+		c.SetZN(v)
 	case "PLP":
 		c.PopStatusRegister()
 	case "JMP":
