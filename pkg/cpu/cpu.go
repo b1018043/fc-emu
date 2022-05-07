@@ -3,6 +3,7 @@ package cpu
 import (
 	"log"
 
+	"github.com/b1018043/fc-emu/pkg/ppu"
 	"github.com/b1018043/fc-emu/pkg/utils"
 )
 
@@ -120,6 +121,7 @@ type CPU struct {
 	Registers
 	Interrupt int
 	MemoryMap [0xffff]byte
+	PPU       ppu.PPU
 }
 
 // レジスタ内容に関しては http://hp.vector.co.jp/authors/VA042397/nes/6502.html を参照
@@ -176,24 +178,24 @@ func (c *CPU) getAddress(addr uint16) uint16 {
 }
 
 func (c *CPU) setAddress(addr, val uint16) {
-	c.MemoryMap[addr] = byte(val)
-	c.MemoryMap[addr+1] = byte(val >> 8)
+	c.setMemoryValue(addr, byte(val))
+	c.setMemoryValue(addr, byte(val>>8))
 }
 
 func (c *CPU) Push(v uint8) {
 	// 本来 0x0100以下には入らない
-	if c.S < 0 {
-		// TODO: なんか処理をかく
-		return
-	}
+	// if c.S < 0 {
+	// 	// TODO: なんか処理をかく
+	// 	return
+	// }
 	c.MemoryMap[c.S] = v
 	c.S--
 }
 
 func (c *CPU) PushAddress(val uint16) {
-	if c.S < 0 {
-		return
-	}
+	// if c.S < 0 {
+	// 	return
+	// }
 	c.setAddress(stackStart|uint16(c.S-1), val)
 	c.S -= 2
 }
@@ -342,6 +344,14 @@ func (c *CPU) Run() int {
 	return operation_cycles[opecode]
 }
 
+func (c *CPU) setMemoryValue(address uint16, val byte) {
+	if address >= 0x2000 && address < 0x2008 {
+		c.PPU.Registers[address-0x2000] = val
+	} else {
+		c.MemoryMap[address] = val
+	}
+}
+
 func (c *CPU) exec(opecode byte, address uint16) {
 	c.PC += uint16(operation_sizes[opecode])
 	switch operation_names[opecode] {
@@ -355,11 +365,11 @@ func (c *CPU) exec(opecode byte, address uint16) {
 		c.Y = c.MemoryMap[address]
 		c.SetZN(c.Y)
 	case "STA":
-		c.MemoryMap[address] = c.A
+		c.setMemoryValue(address, c.A)
 	case "STX":
-		c.MemoryMap[address] = c.X
+		c.setMemoryValue(address, c.X)
 	case "STY":
-		c.MemoryMap[address] = c.Y
+		c.setMemoryValue(address, c.Y)
 	case "TAX":
 		c.X = c.A
 		c.SetZN(c.X)
@@ -412,7 +422,7 @@ func (c *CPU) exec(opecode byte, address uint16) {
 		if operation_modes[opecode] == modeAccumulator {
 			c.A = v
 		} else {
-			c.MemoryMap[address] = v
+			c.setMemoryValue(address, v)
 		}
 	case "BIT":
 		v := c.MemoryMap[address]
@@ -433,8 +443,9 @@ func (c *CPU) exec(opecode byte, address uint16) {
 		c.P.C = !utils.IsNegativeByte(v)
 		c.SetZN(v)
 	case "DEC":
-		c.MemoryMap[address]--
-		c.SetZN(c.MemoryMap[address])
+		v := c.MemoryMap[address] - 1
+		c.SetZN(v)
+		c.setMemoryValue(address, v)
 	case "DEX":
 		c.X--
 		c.SetZN(c.X)
@@ -445,8 +456,9 @@ func (c *CPU) exec(opecode byte, address uint16) {
 		c.A ^= c.MemoryMap[address]
 		c.SetZN(c.A)
 	case "INC":
-		c.MemoryMap[address]++
-		c.SetZN(c.MemoryMap[address])
+		v := c.MemoryMap[address] + 1
+		c.SetZN(v)
+		c.setMemoryValue(address, v)
 	case "INX":
 		c.X++
 		c.SetZN(c.X)
@@ -468,7 +480,7 @@ func (c *CPU) exec(opecode byte, address uint16) {
 		if operation_modes[opecode] == modeAccumulator {
 			c.A = v
 		} else {
-			c.MemoryMap[address] = v
+			c.setMemoryValue(address, v)
 		}
 	case "ORA":
 		c.A |= c.MemoryMap[address]
@@ -490,7 +502,7 @@ func (c *CPU) exec(opecode byte, address uint16) {
 		if operation_modes[opecode] == modeAccumulator {
 			c.A = v
 		} else {
-			c.MemoryMap[address] = v
+			c.setMemoryValue(address, v)
 		}
 
 	case "ROR":
@@ -511,7 +523,7 @@ func (c *CPU) exec(opecode byte, address uint16) {
 		if operation_modes[opecode] == modeAccumulator {
 			c.A = v
 		} else {
-			c.MemoryMap[address] = v
+			c.setMemoryValue(address, v)
 		}
 	case "SBC":
 		v1 := c.A

@@ -46,7 +46,7 @@ type BackgroundContent struct {
 }
 
 type PPU struct {
-	// Registers []byte // 0x2000~0x2007
+	Registers  []byte // 0x2000~0x2007
 	MemoryMap  [0x3FFF]byte
 	Cycle      int
 	Line       int
@@ -64,7 +64,7 @@ func NewPPU(charROM []byte) *PPU {
 	}
 }
 
-func (p *PPU) Run(cycle int) {
+func (p *PPU) Run(cycle int) bool {
 	p.Cycle += cycle
 	if p.Line == 0 {
 		p.Background = p.Background[:0]
@@ -79,8 +79,10 @@ func (p *PPU) Run(cycle int) {
 		}
 		if p.Line == 262 {
 			p.Line = 0
+			return true
 		}
 	}
+	return false
 }
 
 // タイルの座標からどのスプライトを表示すれば良いか判断する

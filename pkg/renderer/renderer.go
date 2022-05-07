@@ -1,6 +1,8 @@
 package renderer
 
 import (
+	"github.com/b1018043/fc-emu/pkg/cpu"
+	"github.com/b1018043/fc-emu/pkg/ppu"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -11,6 +13,8 @@ const (
 
 type EbitenRenderer struct {
 	pixels []byte
+	CPU    cpu.CPU
+	PPU    ppu.PPU
 }
 
 func (e *EbitenRenderer) renderSprite(screen *ebiten.Image, sprite [][]byte, spriteNum int) {
@@ -25,7 +29,20 @@ func (e *EbitenRenderer) Layout(outsideWidth, outsideHeight int) (screenWidth, s
 }
 
 func (e *EbitenRenderer) Update() error {
+	for {
+		cycle := 0
+		cycle += e.CPU.Run()
+		if ok := e.PPU.Run(cycle * 3); ok {
+			e.updatePixels()
+			break
+		}
+	}
 	return nil
+}
+
+func (e *EbitenRenderer) updatePixels() {
+	// for i, v := range e.PPU.Background {
+	// }
 }
 
 func (e *EbitenRenderer) Draw(screen *ebiten.Image) {
