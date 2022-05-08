@@ -46,21 +46,23 @@ type BackgroundContent struct {
 }
 
 type PPU struct {
-	Registers  []byte // 0x2000~0x2007
-	MemoryMap  [0x3FFF]byte
-	Cycle      int
-	Line       int
-	charROM    []byte
-	Background []BackgroundContent
+	Registers     []byte // 0x2000~0x2007
+	MemoryMap     [0x3FFF]byte
+	Cycle         int
+	Line          int
+	charROM       []byte
+	Background    []BackgroundContent
+	addressBuffer []byte
 }
 
 func NewPPU(charROM []byte) *PPU {
 	return &PPU{
-		MemoryMap:  [0x3fff]byte{},
-		Cycle:      0,
-		Line:       0,
-		charROM:    charROM,
-		Background: make([]BackgroundContent, 30),
+		MemoryMap:     [0x3fff]byte{},
+		Cycle:         0,
+		Line:          0,
+		charROM:       charROM,
+		Background:    make([]BackgroundContent, 30),
+		addressBuffer: make([]byte, 0, 2),
 	}
 }
 
@@ -143,4 +145,31 @@ func (p *PPU) buildBackground() {
 			PaletteID: palette,
 		})
 	}
+}
+
+func (p *PPU) setAddress(addr uint16) {
+	p.addressBuffer[0] = byte(addr >> 8)
+	p.addressBuffer[1] = byte(addr)
+}
+
+func (p *PPU) getAddress() uint16 {
+	return uint16(p.addressBuffer[0])<<8 | uint16(p.addressBuffer[1])
+}
+
+func (p *PPU) GetData() byte {
+	v := p.MemoryMap[p.getAddress()]
+	p.setAddress(p.getAddress() + 1)
+	return v
+}
+
+func (p *PPU) SetData(val byte) {
+	p.MemoryMap[p.getAddress()] = val
+	p.setAddress(p.getAddress() + 1)
+}
+
+func (p *PPU) SetAddress(addr byte) {
+	if len(p.addressBuffer) >= 2 {
+		p.addressBuffer = p.addressBuffer[:0]
+	}
+	p.addressBuffer = append(p.addressBuffer, addr)
 }
