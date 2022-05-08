@@ -173,8 +173,14 @@ func NewRegisters() *Registers {
 	}
 }
 
+func (c *CPU) SetPRGROM(progROM []byte) {
+	for i := 0; i < len(progROM); i++ {
+		c.setMemoryValue(uint16(i+0x8000), progROM[i])
+	}
+}
+
 func (c *CPU) getAddress(addr uint16) uint16 {
-	return uint16(c.MemoryMap[addr]) | (uint16(c.MemoryMap[addr+1]) << 8)
+	return uint16(c.getMemoryValue(addr)) | uint16(c.getMemoryValue(addr+1))<<8
 }
 
 func (c *CPU) setAddress(addr, val uint16) {
@@ -188,7 +194,7 @@ func (c *CPU) Push(v uint8) {
 	// 	// TODO: なんか処理をかく
 	// 	return
 	// }
-	c.MemoryMap[c.S] = v
+	c.setMemoryValue(stackStart|uint16(c.S), v)
 	c.S--
 }
 
@@ -231,7 +237,7 @@ func (c *CPU) PushStatusRegister() {
 
 func (c *CPU) Pop() uint8 {
 	c.Registers.S++
-	return c.MemoryMap[c.S]
+	return c.getMemoryValue(stackStart | uint16(c.S))
 }
 
 func (c *CPU) PopAddress() uint16 {
@@ -297,11 +303,11 @@ func (c *CPU) Reset() {
 func (c *CPU) detectAddress(mode int) uint16 {
 	switch mode {
 	case modeAbsolute:
-		return uint16(c.MemoryMap[c.PC]) | uint16(c.MemoryMap[c.PC+1])<<8
+		return uint16(c.getMemoryValue(c.PC)) | uint16(c.getMemoryValue(c.PC+1))<<8
 	case modeAbsoluteX:
-		return (uint16(c.MemoryMap[c.PC]) | uint16(c.MemoryMap[c.PC+1])<<8) + uint16(c.X)
+		return (uint16(c.getMemoryValue(c.PC)) | uint16(c.getMemoryValue(c.PC+1))<<8) + uint16(c.X)
 	case modeAbsoluteY:
-		return (uint16(c.MemoryMap[c.PC]) | uint16(c.MemoryMap[c.PC+1])<<8) + uint16(c.Y)
+		return (uint16(c.getMemoryValue(c.PC)) | uint16(c.getMemoryValue(c.PC+1))<<8) + uint16(c.Y)
 	case modeAccumulator:
 		return 0
 	case modeImmediate:
@@ -309,34 +315,34 @@ func (c *CPU) detectAddress(mode int) uint16 {
 	case modeImplied:
 		return 0
 	case modeIndirect:
-		abs := uint16(c.MemoryMap[c.PC]) | (uint16(c.MemoryMap[c.PC+1]) << 8)
-		return uint16(c.MemoryMap[abs]) | (uint16(c.MemoryMap[abs+1]) << 8)
+		abs := uint16(c.getMemoryValue(c.PC)) | (uint16(c.getMemoryValue(c.PC+1)) << 8)
+		return uint16(c.getMemoryValue(abs)) | (uint16(c.getMemoryValue(abs+1)) << 8)
 	case modeIndirectX:
-		t := uint16(c.MemoryMap[c.PC]) + uint16(c.X)
-		return uint16(c.MemoryMap[t]) | uint16(c.MemoryMap[t+1])<<8
+		t := uint16(c.getMemoryValue(c.PC)) + uint16(c.X)
+		return uint16(c.getMemoryValue(t)) | (uint16(c.getMemoryValue(t+1)) << 8)
 	case modeIndirectY:
-		t := uint16(c.MemoryMap[c.PC])
-		return (uint16(c.MemoryMap[t]) | (uint16(c.MemoryMap[t+1]) << 8)) + uint16(c.Y)
+		t := uint16(c.getMemoryValue(c.PC))
+		return (uint16(c.getMemoryValue(t)) | uint16(c.getMemoryValue(t+1))<<8) + uint16(c.Y)
 	case modeRelative:
-		offset := uint16(c.MemoryMap[c.PC])
+		offset := uint16(c.getMemoryValue(c.PC))
 		var t uint16 = 0
 		if offset >= 0x80 {
 			t = 0x100
 		}
 		return c.PC + 1 + offset - t
 	case modeZeroPage:
-		return uint16(c.MemoryMap[c.PC])
+		return uint16(c.getMemoryValue(c.PC))
 	case modeZeroPageX:
-		return uint16(c.MemoryMap[c.PC]) + uint16(c.X)
+		return uint16(c.getMemoryValue(c.PC)) + uint16(c.X)
 	case modeZeroPageY:
-		return uint16(c.MemoryMap[c.PC]) + uint16(c.Y)
+		return uint16(c.getMemoryValue(c.PC)) + uint16(c.Y)
 	}
 	log.Println("unknown operation mode")
 	return 1
 }
 
 func (c *CPU) Run() int {
-	opecode := c.MemoryMap[c.PC]
+	opecode := c.getMemoryValue(c.PC)
 	c.PC++
 	address := c.detectAddress(operation_modes[opecode])
 	c.PC += uint16(operation_sizes[opecode] - 1)
@@ -346,9 +352,29 @@ func (c *CPU) Run() int {
 
 func (c *CPU) setMemoryValue(address uint16, val byte) {
 	if address >= 0x2000 && address < 0x2008 {
-		c.PPU.Registers[address-0x2000] = val
+		switch {
+		case address == 0x2006:
+			c.PPU.SetAddress(val)
+		case address == 0x2007:
+			c.PPU.SetData(val)
+		default:
+			c.PPU.Registers[address-0x2000] = val
+		}
 	} else {
 		c.MemoryMap[address] = val
+	}
+}
+
+func (c *CPU) getMemoryValue(address uint16) byte {
+	if address >= 0x2000 && address < 0x2008 {
+		switch {
+		case address == 0x2007:
+			return c.PPU.GetData()
+		default:
+			return c.PPU.Registers[address-0x2000]
+		}
+	} else {
+		return c.MemoryMap[address]
 	}
 }
 
@@ -356,13 +382,13 @@ func (c *CPU) exec(opecode byte, address uint16) {
 	c.PC += uint16(operation_sizes[opecode])
 	switch operation_names[opecode] {
 	case "LDA":
-		c.A = c.MemoryMap[address]
+		c.A = c.getMemoryValue(address)
 		c.SetZN(c.A)
 	case "LDX":
-		c.X = c.MemoryMap[address]
+		c.X = c.getMemoryValue(address)
 		c.SetZN(c.X)
 	case "LDY":
-		c.Y = c.MemoryMap[address]
+		c.Y = c.getMemoryValue(address)
 		c.SetZN(c.Y)
 	case "STA":
 		c.setMemoryValue(address, c.A)
@@ -390,7 +416,7 @@ func (c *CPU) exec(opecode byte, address uint16) {
 		c.SetZN(c.A)
 	case "ADC":
 		v1 := c.A
-		v2 := c.MemoryMap[address]
+		v2 := c.getMemoryValue(address)
 		var v3 byte
 		if c.P.C {
 			v3 = 0
@@ -405,14 +431,14 @@ func (c *CPU) exec(opecode byte, address uint16) {
 		c.P.V = (!((v1^v2)&0x80 != 0)) && ((c.A^v1)&0x80 != 1)
 		c.P.C = int(v1)+int(v2)+int(v3) > 0xFF
 	case "AND":
-		c.A &= c.MemoryMap[address]
+		c.A &= c.getMemoryValue(address)
 		c.SetZN(c.A)
 	case "ASL":
 		var v uint8
 		if operation_modes[opecode] == modeAccumulator {
 			v = c.A
 		} else {
-			v = c.MemoryMap[address]
+			v = c.getMemoryValue(address)
 		}
 		c.P.C = (v>>7)&1 != 0
 		v <<= 1
@@ -425,25 +451,25 @@ func (c *CPU) exec(opecode byte, address uint16) {
 			c.setMemoryValue(address, v)
 		}
 	case "BIT":
-		v := c.MemoryMap[address]
+		v := c.getMemoryValue(address)
 		c.P.N = utils.IsNegativeByte(v)
 		c.P.V = (v>>6&1 != 0)
 		c.P.Z = v&c.A == 0
 	case "CMP":
-		v := c.A - c.MemoryMap[address]
+		v := c.A - c.getMemoryValue(address)
 		c.P.C = !utils.IsNegativeByte(v)
 		c.SetZN(v)
 	case "CPX":
-		v := c.X - c.MemoryMap[address]
+		v := c.X - c.getMemoryValue(address)
 		c.P.C = !utils.IsNegativeByte(v)
 		c.SetZN(v)
 	case "CPY":
-		v := c.Y - c.MemoryMap[address]
+		v := c.Y - c.getMemoryValue(address)
 		// P.Zがtrueであれば等しい、P.C がtrueであればc.Yの方が大きい、P.Nがtrueであればアドレスで示された値が大きい
 		c.P.C = !utils.IsNegativeByte(v)
 		c.SetZN(v)
 	case "DEC":
-		v := c.MemoryMap[address] - 1
+		v := c.getMemoryValue(address) - 1
 		c.SetZN(v)
 		c.setMemoryValue(address, v)
 	case "DEX":
@@ -453,10 +479,10 @@ func (c *CPU) exec(opecode byte, address uint16) {
 		c.Y--
 		c.SetZN(c.Y)
 	case "EOR":
-		c.A ^= c.MemoryMap[address]
+		c.A ^= c.getMemoryValue(address)
 		c.SetZN(c.A)
 	case "INC":
-		v := c.MemoryMap[address] + 1
+		v := c.getMemoryValue(address) + 1
 		c.SetZN(v)
 		c.setMemoryValue(address, v)
 	case "INX":
@@ -470,7 +496,7 @@ func (c *CPU) exec(opecode byte, address uint16) {
 		if operation_modes[opecode] == modeAccumulator {
 			v = c.A
 		} else {
-			v = c.MemoryMap[address]
+			v = c.getMemoryValue(address)
 		}
 		c.P.C = v&1 != 0
 		v >>= 1
@@ -483,14 +509,14 @@ func (c *CPU) exec(opecode byte, address uint16) {
 			c.setMemoryValue(address, v)
 		}
 	case "ORA":
-		c.A |= c.MemoryMap[address]
+		c.A |= c.getMemoryValue(address)
 		c.SetZN(c.A)
 	case "ROL":
 		var v uint8
 		if operation_modes[opecode] == modeAccumulator {
 			v = c.A
 		} else {
-			v = c.MemoryMap[address]
+			v = c.getMemoryValue(address)
 		}
 
 		carry := (v & 0x80) >> 7
@@ -510,7 +536,7 @@ func (c *CPU) exec(opecode byte, address uint16) {
 		if operation_modes[opecode] == modeAccumulator {
 			v = c.A
 		} else {
-			v = c.MemoryMap[address]
+			v = c.getMemoryValue(address)
 		}
 
 		carry := v & 1
@@ -527,7 +553,7 @@ func (c *CPU) exec(opecode byte, address uint16) {
 		}
 	case "SBC":
 		v1 := c.A
-		v2 := c.MemoryMap[address]
+		v2 := c.getMemoryValue(address)
 		var v3 byte
 		if c.P.C {
 			v3 = 0
