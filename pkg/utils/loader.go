@@ -15,6 +15,7 @@ const (
 // param: filename ret: progROM charROM error
 func LoadFCROM(filename string) ([]byte, []byte, error) {
 	file, err := os.Open(filename)
+	defer file.Close()
 	if err != nil {
 		return nil, nil, err
 	}

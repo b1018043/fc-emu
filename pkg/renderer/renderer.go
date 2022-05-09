@@ -34,16 +34,24 @@ var colors = []color.RGBA{
 
 type EbitenRenderer struct {
 	pixels []byte
-	CPU    cpu.CPU
-	PPU    ppu.PPU
+	CPU    *cpu.CPU
+	PPU    *ppu.PPU
 }
 
-func (e *EbitenRenderer) renderSprite(screen *ebiten.Image, sprite [][]byte, spriteNum int) {
-	for i := 0; i < 8; i++ {
-		for j := 0; j < 8; j++ {
-		}
+func NewEbitenRenderer(cpu *cpu.CPU, ppu *ppu.PPU) *EbitenRenderer {
+	return &EbitenRenderer{
+		pixels: make([]byte, 4*WINDOW_WIDTH*WINDOW_HEIGHT),
+		CPU:    cpu,
+		PPU:    ppu,
 	}
 }
+
+// func (e *EbitenRenderer) renderSprite(screen *ebiten.Image, sprite [][]byte, spriteNum int) {
+// 	for i := 0; i < 8; i++ {
+// 		for j := 0; j < 8; j++ {
+// 		}
+// 	}
+// }
 
 func (e *EbitenRenderer) renderTile(tile ppu.BackgroundContent, tileX, tileY int) {
 	for i := 0; i < 8; i++ {

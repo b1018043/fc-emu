@@ -120,8 +120,8 @@ var operation_cycles = [256]int{
 type CPU struct {
 	Registers
 	Interrupt int
-	MemoryMap [0xffff]byte
-	PPU       ppu.PPU
+	MemoryMap [0xffff + 1]byte
+	PPU       *ppu.PPU
 }
 
 // レジスタ内容に関しては http://hp.vector.co.jp/authors/VA042397/nes/6502.html を参照
@@ -149,7 +149,7 @@ func NewCPU() *CPU {
 	return &CPU{
 		Registers: *NewRegisters(),
 		Interrupt: NONE,
-		MemoryMap: [0xffff]byte{},
+		MemoryMap: [0xFFFF + 1]byte{},
 	}
 }
 
@@ -174,9 +174,15 @@ func NewRegisters() *Registers {
 }
 
 func (c *CPU) SetPRGROM(progROM []byte) {
+	log.Printf("progROM size: %d\n", len(progROM))
 	for i := 0; i < len(progROM); i++ {
 		c.setMemoryValue(uint16(i+0x8000), progROM[i])
+		log.Printf("ROM[0x%x]: %d", i+0x8000, progROM[i])
 	}
+}
+
+func (c *CPU) SetPPU(ppu *ppu.PPU) {
+	c.PPU = ppu
 }
 
 func (c *CPU) getAddress(addr uint16) uint16 {
@@ -336,8 +342,9 @@ func (c *CPU) detectAddress(mode int) uint16 {
 		return uint16(c.getMemoryValue(c.PC)) + uint16(c.X)
 	case modeZeroPageY:
 		return uint16(c.getMemoryValue(c.PC)) + uint16(c.Y)
+	default:
+		log.Fatalf("unknown operation mode %d, c.PC=0x%x\n", mode, c.PC)
 	}
-	log.Println("unknown operation mode")
 	return 1
 }
 
@@ -347,6 +354,7 @@ func (c *CPU) Run() int {
 	address := c.detectAddress(operation_modes[opecode])
 	c.PC += uint16(operation_sizes[opecode] - 1)
 	c.exec(opecode, address)
+	log.Printf("opecode: %d, size: %d, name: %s\n", opecode, operation_sizes[opecode], operation_names[opecode])
 	return operation_cycles[opecode]
 }
 
