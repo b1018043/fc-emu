@@ -46,13 +46,6 @@ func NewEbitenRenderer(cpu *cpu.CPU, ppu *ppu.PPU) *EbitenRenderer {
 	}
 }
 
-// func (e *EbitenRenderer) renderSprite(screen *ebiten.Image, sprite [][]byte, spriteNum int) {
-// 	for i := 0; i < 8; i++ {
-// 		for j := 0; j < 8; j++ {
-// 		}
-// 	}
-// }
-
 func (e *EbitenRenderer) renderTile(tile ppu.BackgroundContent, tileX, tileY int) {
 	for i := 0; i < 8; i++ {
 		for j := 0; j < 8; j++ {
@@ -74,7 +67,10 @@ func (e *EbitenRenderer) renderTile(tile ppu.BackgroundContent, tileX, tileY int
 func (e *EbitenRenderer) renderBG() {
 	background := e.PPU.Background
 	for i, v := range background {
-		// x, y := (i%33)*8, (i/33)*8
+		// NOTE: 挙動がもしかしたら怪しい
+		// 'Hello, world'のnesを実行した際にiが0x1a9の時にHの描写が行われる
+		// 一方で、https://qiita.com/bokuweb/items/1575337bef44ae82f4d3#%E5%8F%82%E8%80%83%E3%82%B5%E3%82%A4%E3%83%88 では1c9
+		// でHの描写が行われるという旨の記述がある
 		x, y := (i%32)*8, (i/32)*8
 		// if v.Tile[0][0] != 0 {
 		// 	log.Fatalf("x,y:=%d,%d\ni:=%x\nbackground:=%d\n", x, y, i, len(background))

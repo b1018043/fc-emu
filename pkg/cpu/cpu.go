@@ -360,15 +360,19 @@ func (c *CPU) Run() int {
 }
 
 func (c *CPU) setMemoryValue(address uint16, val byte) {
+	// NOTE: 0x2000 ~ 0x2008 はPPUのレジスタへのアクセスを行う
 	if address >= 0x2000 && address < 0x2008 {
 		// log.Printf("address: 0x%x\n", address)
 		switch {
+		// TODO: remove magic number
 		case address == 0x2006:
 			c.PPU.SetAddress(val)
 		case address == 0x2007:
 			c.PPU.SetData(val)
 		default:
 			// NOTE: 現状では0x2006と0x2007にのみ対応している
+			// もし、他のレジスタへの書き込みも行いたい場合には、初めにPPUのレジスタ用のスライスを
+			// 初期化するところから実装を始めるのが吉
 			// c.PPU.Registers[address-0x2000] = val
 		}
 	} else {
