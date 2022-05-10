@@ -174,10 +174,10 @@ func NewRegisters() *Registers {
 }
 
 func (c *CPU) SetPRGROM(progROM []byte) {
-	log.Printf("progROM size: %d\n", len(progROM))
+	// log.Printf("progROM size: %d\n", len(progROM))
 	for i := 0; i < len(progROM); i++ {
 		c.setMemoryValue(uint16(i+0x8000), progROM[i])
-		log.Printf("ROM[0x%x]: %d", i+0x8000, progROM[i])
+		// log.Printf("ROM[0x%x]: %d", i+0x8000, progROM[i])
 	}
 }
 
@@ -350,23 +350,26 @@ func (c *CPU) detectAddress(mode int) uint16 {
 
 func (c *CPU) Run() int {
 	opecode := c.getMemoryValue(c.PC)
+	// log.Printf("PC: %x, opecode: %d, size: %d, name: %s\n", c.PC, opecode, operation_sizes[opecode], operation_names[opecode])
 	c.PC++
 	address := c.detectAddress(operation_modes[opecode])
 	c.PC += uint16(operation_sizes[opecode] - 1)
 	c.exec(opecode, address)
-	log.Printf("opecode: %d, size: %d, name: %s\n", opecode, operation_sizes[opecode], operation_names[opecode])
+	// log.Printf("after PC: %x", c.PC)
 	return operation_cycles[opecode]
 }
 
 func (c *CPU) setMemoryValue(address uint16, val byte) {
 	if address >= 0x2000 && address < 0x2008 {
+		// log.Printf("address: 0x%x\n", address)
 		switch {
 		case address == 0x2006:
 			c.PPU.SetAddress(val)
 		case address == 0x2007:
 			c.PPU.SetData(val)
 		default:
-			c.PPU.Registers[address-0x2000] = val
+			// NOTE: 現状では0x2006と0x2007にのみ対応している
+			// c.PPU.Registers[address-0x2000] = val
 		}
 	} else {
 		c.MemoryMap[address] = val
@@ -387,7 +390,6 @@ func (c *CPU) getMemoryValue(address uint16) byte {
 }
 
 func (c *CPU) exec(opecode byte, address uint16) {
-	c.PC += uint16(operation_sizes[opecode])
 	switch operation_names[opecode] {
 	case "LDA":
 		c.A = c.getMemoryValue(address)

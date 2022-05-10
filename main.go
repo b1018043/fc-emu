@@ -18,6 +18,7 @@ func main() {
 	cpu := cpu.NewCPU()
 	cpu.SetPRGROM(progROM)
 	ppu := ppu.NewPPU(charROM)
+	cpu.PPU = ppu
 	game := renderer.NewEbitenRenderer(cpu, ppu)
 	ebiten.SetWindowSize(renderer.WINDOW_WIDTH, renderer.WINDOW_HEIGHT)
 	ebiten.SetWindowTitle("FC-emu")
