@@ -1,7 +1,10 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"log"
+	"os"
 
 	"github.com/b1018043/fc-emu/pkg/cpu"
 	"github.com/b1018043/fc-emu/pkg/ppu"
@@ -11,8 +14,13 @@ import (
 )
 
 func main() {
-	// TODO: remove magic number
-	progROM, charROM, err := utils.LoadFCROM("./static/roms/MapWalker.nes")
+	flag.Parse()
+	args := flag.Args()
+	if len(args) != 1 {
+		fmt.Printf("Usage: go run main.go <nes file name>\n")
+		os.Exit(1)
+	}
+	progROM, charROM, err := utils.LoadFCROM(args[0])
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -21,6 +29,7 @@ func main() {
 	ppu := ppu.NewPPU(charROM)
 	cpu.PPU = ppu
 	game := renderer.NewEbitenRenderer(cpu, ppu)
+	game.CPU.Reset()
 	ebiten.SetWindowSize(renderer.WINDOW_WIDTH, renderer.WINDOW_HEIGHT)
 	ebiten.SetWindowTitle("FC-emu")
 	if err := ebiten.RunGame(game); err != nil {

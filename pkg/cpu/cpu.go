@@ -286,6 +286,11 @@ func (c *CPU) SetZN(val uint8) {
 }
 
 func (c *CPU) Reset() {
+	newPC := c.getAddress(0xfffc)
+	if newPC == 0x0000 {
+		newPC = 0x8000
+	}
+
 	c.Registers = Registers{
 		A: 0x00,
 		X: 0x00,
@@ -301,7 +306,7 @@ func (c *CPU) Reset() {
 			Z: false,
 			C: false,
 		},
-		PC: 0xFFFC,
+		PC: newPC,
 	}
 }
 
@@ -368,10 +373,11 @@ func (c *CPU) Run() int {
 		log.Fatalf("unknown interrupt: %d\n", c.Interrupt)
 	}
 	opecode := c.getMemoryValue(c.PC)
-	log.Printf("PC: %x, opecode: %d, size: %d, name: %s\n", c.PC, opecode, operation_sizes[opecode], operation_names[opecode])
+	log.Printf("PC: %x, opecode: %d, size: %d, name: %s", c.PC, opecode, operation_sizes[opecode], operation_names[opecode])
 	c.PC++
 	address := c.detectAddress(operation_modes[opecode])
 	c.PC += uint16(operation_sizes[opecode] - 1)
+	log.Printf("address: 0x%04x\n", address)
 	c.exec(opecode, address)
 	// log.Printf("after PC: %x", c.PC)
 	return operation_cycles[opecode]

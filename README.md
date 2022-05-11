@@ -5,7 +5,7 @@
 
 ## 起動方法
 ```bash
-go run main.go
+go run main.go <your rom file>.nes
 ```
 
 ## 開発進捗

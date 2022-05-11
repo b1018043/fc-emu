@@ -1,5 +1,7 @@
 package ppu
 
+import "log"
+
 const (
 	PPU_PATTERN_TABLE0   = 0x0000
 	PPU_PATTERN_TABLE1   = 0x1000
@@ -24,7 +26,7 @@ type BackgroundContent struct {
 
 type PPU struct {
 	Registers     []byte // 0x2000~0x2007
-	MemoryMap     [0x3FFF]byte
+	MemoryMap     [0x3FFF + 1]byte
 	Cycle         int
 	Line          int
 	charROM       []byte
@@ -35,7 +37,7 @@ type PPU struct {
 
 func NewPPU(charROM []byte) *PPU {
 	return &PPU{
-		MemoryMap:     [0x3fff]byte{},
+		MemoryMap:     [0x3fff + 1]byte{},
 		Cycle:         0,
 		Line:          0,
 		charROM:       charROM,
@@ -151,4 +153,7 @@ func (p *PPU) SetAddress(addr byte) {
 		p.addressBuffer = p.addressBuffer[:0]
 	}
 	p.addressBuffer = append(p.addressBuffer, addr)
+	if len(p.addressBuffer) == 2 && p.getAddress() >= 0x3fff {
+		log.Fatalf("address 0x%02x\nbuf[0] 0x%02x, bud[1] 0x%02x\n", p.getAddress(), p.addressBuffer[0], p.addressBuffer[1])
+	}
 }
