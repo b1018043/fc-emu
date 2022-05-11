@@ -2,7 +2,6 @@ package renderer
 
 import (
 	"image/color"
-	"log"
 
 	"github.com/b1018043/fc-emu/pkg/cpu"
 	"github.com/b1018043/fc-emu/pkg/ppu"
@@ -69,9 +68,9 @@ func (e *EbitenRenderer) renderBG() {
 	background := e.PPU.Background
 	for i, v := range background {
 		x, y := (i%32)*8, (i/32)*8
-		if v.Tile[0][0] != 0 {
-			log.Fatalf("x,y:=%d,%d\ni:=%x\nbackground:=%d\n", x, y, i, len(background))
-		}
+		// if v.Tile[0][0] != 0 {
+		// 	log.Fatalf("x,y:=%d,%d\ni:=%x\nbackground:=%d\n", x, y, i, len(background))
+		// }
 		e.renderTile(v, x, y)
 	}
 }
