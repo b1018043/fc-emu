@@ -174,10 +174,10 @@ func NewRegisters() *Registers {
 }
 
 func (c *CPU) SetPRGROM(progROM []byte) {
-	// log.Printf("progROM size: %d\n", len(progROM))
+	// log.Printf("progROM size: 0x%x\n", len(progROM))
 	for i := 0; i < len(progROM); i++ {
 		c.setMemoryValue(uint16(i+0x8000), progROM[i])
-		// log.Printf("ROM[0x%x]: %d", i+0x8000, progROM[i])
+		// log.Printf("ROM[0x%x]: 0x%02x, opename: %s\n", i+0x8000, progROM[i], operation_names[progROM[i]])
 	}
 }
 
@@ -191,7 +191,7 @@ func (c *CPU) getAddress(addr uint16) uint16 {
 
 func (c *CPU) setAddress(addr, val uint16) {
 	c.setMemoryValue(addr, byte(val))
-	c.setMemoryValue(addr, byte(val>>8))
+	c.setMemoryValue(addr+1, byte(val>>8))
 }
 
 func (c *CPU) Push(v uint8) {
@@ -343,14 +343,32 @@ func (c *CPU) detectAddress(mode int) uint16 {
 	case modeZeroPageY:
 		return uint16(c.getMemoryValue(c.PC)) + uint16(c.Y)
 	default:
-		log.Fatalf("unknown operation mode %d, c.PC=0x%x\n", mode, c.PC)
+		log.Fatalf("unknown operation mode %d, c.PC=0x%x\n", mode, c.PC-1)
 	}
 	return 1
 }
 
 func (c *CPU) Run() int {
+	switch c.Interrupt {
+	case RESET:
+	case NMI:
+	case IRQ:
+		c.P.B = false
+	case BRK:
+		if !c.P.I {
+			c.P.B = true
+			c.PC++
+			c.PushAddress(c.PC)
+			c.PushStatusRegister()
+			c.P.I = true
+			c.PC = c.getAddress(0xfffe)
+		}
+	case NONE:
+	default:
+		log.Fatalf("unknown interrupt: %d\n", c.Interrupt)
+	}
 	opecode := c.getMemoryValue(c.PC)
-	// log.Printf("PC: %x, opecode: %d, size: %d, name: %s\n", c.PC, opecode, operation_sizes[opecode], operation_names[opecode])
+	log.Printf("PC: %x, opecode: %d, size: %d, name: %s\n", c.PC, opecode, operation_sizes[opecode], operation_names[opecode])
 	c.PC++
 	address := c.detectAddress(operation_modes[opecode])
 	c.PC += uint16(operation_sizes[opecode] - 1)

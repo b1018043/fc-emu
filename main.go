@@ -12,7 +12,7 @@ import (
 
 func main() {
 	// TODO: remove magic number
-	progROM, charROM, err := utils.LoadFCROM("./static/roms/sample1.nes")
+	progROM, charROM, err := utils.LoadFCROM("./static/roms/MapWalker.nes")
 	if err != nil {
 		log.Fatalln(err)
 	}
