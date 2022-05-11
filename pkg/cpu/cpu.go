@@ -333,7 +333,7 @@ func (c *CPU) detectAddress(mode int) uint16 {
 		return uint16(c.getMemoryValue(t)) | (uint16(c.getMemoryValue(t+1)) << 8)
 	case modeIndirectY:
 		t := uint16(c.getMemoryValue(c.PC))
-		return (uint16(c.getMemoryValue(t)) | uint16(c.getMemoryValue(t+1))<<8) + uint16(c.Y)
+		return ((uint16(c.getMemoryValue(t))) | (uint16(c.getMemoryValue(t+1)) << 8)) + uint16(c.Y)
 	case modeRelative:
 		offset := uint16(c.getMemoryValue(c.PC))
 		var t uint16 = 0
@@ -398,6 +398,7 @@ func (c *CPU) setMemoryValue(address uint16, val byte) {
 			// もし、他のレジスタへの書き込みも行いたい場合には、初めにPPUのレジスタ用のスライスを
 			// 初期化するところから実装を始めるのが吉
 			// c.PPU.Registers[address-0x2000] = val
+			log.Printf("address: 0x%04x, val: 0x%02x\n", address, val)
 		}
 	} else {
 		c.MemoryMap[address] = val
@@ -410,7 +411,8 @@ func (c *CPU) getMemoryValue(address uint16) byte {
 		case address == 0x2007:
 			return c.PPU.GetData()
 		default:
-			return c.PPU.Registers[address-0x2000]
+			// return c.PPU.Registers[address-0x2000]
+			return c.MemoryMap[address]
 		}
 	} else {
 		return c.MemoryMap[address]

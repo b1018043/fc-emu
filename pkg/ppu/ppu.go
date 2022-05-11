@@ -1,7 +1,5 @@
 package ppu
 
-import "log"
-
 const (
 	PPU_PATTERN_TABLE0   = 0x0000
 	PPU_PATTERN_TABLE1   = 0x1000
@@ -54,11 +52,11 @@ func (p *PPU) Run(cycle int) bool {
 
 	if p.Cycle >= 341 {
 		p.Cycle -= 341
-		p.Line++
 
 		if p.Line <= 240 && p.Line%8 == 0 {
 			p.buildBackground()
 		}
+		p.Line++
 		if p.Line == 262 {
 			p.Line = 0
 			p.PaletteRAM = p.MemoryMap[PPU_BG_PALLET:]
@@ -134,7 +132,8 @@ func (p *PPU) setAddress(addr uint16) {
 }
 
 func (p *PPU) getAddress() uint16 {
-	return uint16(p.addressBuffer[0])<<8 | uint16(p.addressBuffer[1])
+	addr := uint16(p.addressBuffer[0])<<8 | uint16(p.addressBuffer[1])
+	return addr
 }
 
 func (p *PPU) GetData() byte {
@@ -153,7 +152,7 @@ func (p *PPU) SetAddress(addr byte) {
 		p.addressBuffer = p.addressBuffer[:0]
 	}
 	p.addressBuffer = append(p.addressBuffer, addr)
-	if len(p.addressBuffer) == 2 && p.getAddress() >= 0x3fff {
-		log.Fatalf("address 0x%02x\nbuf[0] 0x%02x, bud[1] 0x%02x\n", p.getAddress(), p.addressBuffer[0], p.addressBuffer[1])
-	}
+	// if len(p.addressBuffer) == 2 && p.getAddress() >= 0x3fff {
+	// 	log.Fatalf("address 0x%02x\nbuf[0] 0x%02x, bud[1] 0x%02x\n", p.getAddress(), p.addressBuffer[0], p.addressBuffer[1])
+	// }
 }
