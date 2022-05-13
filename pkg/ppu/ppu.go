@@ -1,5 +1,7 @@
 package ppu
 
+import "github.com/b1018043/fc-emu/pkg/logger"
+
 const (
 	PPU_PATTERN_TABLE0   = 0x0000
 	PPU_PATTERN_TABLE1   = 0x1000
@@ -31,6 +33,7 @@ type PPU struct {
 	Background    []BackgroundContent
 	addressBuffer []byte
 	PaletteRAM    []byte
+	IsVBlank      bool
 }
 
 func NewPPU(charROM []byte) *PPU {
@@ -57,9 +60,13 @@ func (p *PPU) Run(cycle int) bool {
 			p.buildBackground()
 		}
 		p.Line++
+		if p.Line == 241 && !p.IsVBlank {
+			p.IsVBlank = true
+		}
 		if p.Line == 262 {
 			p.Line = 0
 			p.PaletteRAM = p.MemoryMap[PPU_BG_PALLET:]
+			p.IsVBlank = false
 			return true
 		}
 	}
@@ -147,9 +154,16 @@ func (p *PPU) SetData(val byte) {
 	p.setAddress(p.getAddress() + 1)
 }
 
+var c = 0
+
 func (p *PPU) SetAddress(addr byte) {
+	c++
+	logger.DebugLog(logger.PRINT, "count: %d\n", c)
 	if len(p.addressBuffer) >= 2 {
 		p.addressBuffer = p.addressBuffer[:0]
 	}
 	p.addressBuffer = append(p.addressBuffer, addr)
+	if len(p.addressBuffer) == 2 {
+		logger.DebugLog(logger.PRINT, "ppu access address: 0x%04x\n", p.getAddress())
+	}
 }

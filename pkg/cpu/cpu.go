@@ -1,6 +1,8 @@
 package cpu
 
 import (
+	"os"
+
 	"github.com/b1018043/fc-emu/pkg/logger"
 	"github.com/b1018043/fc-emu/pkg/ppu"
 	"github.com/b1018043/fc-emu/pkg/utils"
@@ -188,6 +190,7 @@ func (c *CPU) getAddress(addr uint16) uint16 {
 	return uint16(c.getMemoryValue(addr)) | uint16(c.getMemoryValue(addr+1))<<8
 }
 
+// NOTE おかしい気がする(逆では？)
 func (c *CPU) setAddress(addr, val uint16) {
 	c.setMemoryValue(addr, byte(val))
 	c.setMemoryValue(addr+1, byte(val>>8))
@@ -348,21 +351,45 @@ func (c *CPU) detectAddress(mode int) uint16 {
 		return uint16(c.getMemoryValue(c.PC)) + uint16(c.Y)
 	default:
 		logger.DebugLog(logger.FATAL, "unknown operation mode %d, c.PC=0x%x\n", mode, c.PC-1)
+		os.Exit(1)
 	}
 	return 1
 }
 
+// PPUがvblank時にnmi割り込みを起こす
+func (c *CPU) awaitMNI() {
+	if c.PPU.IsVBlank {
+		c.Interrupt = NMI
+		c.PPU.IsVBlank = false
+	}
+}
+
 func (c *CPU) Run() int {
+	c.awaitMNI()
 	switch c.Interrupt {
 	case RESET:
 	case NMI:
-	case IRQ:
 		c.P.B = false
+		// c.PushAddress(c.PC)
+		c.Push(byte(c.PC >> 8))
+		c.Push(byte(c.PC))
+		c.getAddress(0xfffa)
+	case IRQ:
+		if !c.P.I {
+			c.P.B = false
+			// c.PushAddress(c.PC)
+			c.Push(byte(c.PC >> 8))
+			c.Push(byte(c.PC))
+			c.PushStatusRegister()
+			c.PC = c.getAddress(0xfffe)
+		}
 	case BRK:
 		if !c.P.I {
 			c.P.B = true
 			c.PC++
-			c.PushAddress(c.PC)
+			// c.PushAddress(c.PC)
+			c.Push(byte(c.PC >> 8))
+			c.Push(byte(c.PC))
 			c.PushStatusRegister()
 			c.P.I = true
 			c.PC = c.getAddress(0xfffe)
