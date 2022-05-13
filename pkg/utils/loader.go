@@ -34,6 +34,9 @@ func LoadFCROM(filename string) ([]byte, []byte, error) {
 
 	progROM, charROM := parseROMBuffer(bytes)
 
+	// log.Printf("progrom size: 0x%04x\ncharrom size: 0x%04x\n", bytes[4], bytes[5])
+	// log.Fatalf("")
+
 	return progROM, charROM, nil
 }
 

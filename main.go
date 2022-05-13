@@ -30,7 +30,7 @@ func main() {
 	cpu.PPU = ppu
 	game := renderer.NewEbitenRenderer(cpu, ppu)
 	game.CPU.Reset()
-	ebiten.SetWindowSize(renderer.WINDOW_WIDTH, renderer.WINDOW_HEIGHT)
+	ebiten.SetWindowSize(renderer.WINDOW_WIDTH*2, renderer.WINDOW_HEIGHT*2)
 	ebiten.SetWindowTitle("FC-emu")
 	if err := ebiten.RunGame(game); err != nil {
 		log.Fatalln(err)
