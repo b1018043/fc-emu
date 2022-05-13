@@ -3,6 +3,8 @@ package utils
 import (
 	"bufio"
 	"os"
+
+	"github.com/b1018043/fc-emu/pkg/logger"
 )
 
 // NOTE: サイズの定数に関しては https://www.nesdev.org/wiki/INES を参照
@@ -15,7 +17,6 @@ const (
 // param: filename ret: progROM charROM error
 func LoadFCROM(filename string) ([]byte, []byte, error) {
 	file, err := os.Open(filename)
-	defer file.Close()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -34,8 +35,7 @@ func LoadFCROM(filename string) ([]byte, []byte, error) {
 
 	progROM, charROM := parseROMBuffer(bytes)
 
-	// log.Printf("progrom size: 0x%04x\ncharrom size: 0x%04x\n", bytes[4], bytes[5])
-	// log.Fatalf("")
+	logger.DebugLog(logger.PRINT, "progrom size: 0x%04x\ncharrom size: 0x%04x\n", bytes[4], bytes[5])
 
 	return progROM, charROM, nil
 }

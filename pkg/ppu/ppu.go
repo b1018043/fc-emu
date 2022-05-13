@@ -152,7 +152,4 @@ func (p *PPU) SetAddress(addr byte) {
 		p.addressBuffer = p.addressBuffer[:0]
 	}
 	p.addressBuffer = append(p.addressBuffer, addr)
-	// if len(p.addressBuffer) == 2 && p.getAddress() >= 0x3fff {
-	// 	log.Fatalf("address 0x%02x\nbuf[0] 0x%02x, bud[1] 0x%02x\n", p.getAddress(), p.addressBuffer[0], p.addressBuffer[1])
-	// }
 }

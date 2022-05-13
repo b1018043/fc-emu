@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/b1018043/fc-emu/pkg/cpu"
+	"github.com/b1018043/fc-emu/pkg/logger"
 	"github.com/b1018043/fc-emu/pkg/ppu"
 	"github.com/b1018043/fc-emu/pkg/renderer"
 	"github.com/b1018043/fc-emu/pkg/utils"
@@ -14,13 +15,20 @@ import (
 )
 
 func main() {
+	var (
+		filename = flag.String("soft", "", "use soft name")
+		d        = flag.Bool("d", false, "use debug(default false)")
+	)
 	flag.Parse()
-	args := flag.Args()
-	if len(args) != 1 {
-		fmt.Printf("Usage: go run main.go <nes file name>\n")
+	fmt.Println(*filename, *d)
+	if *filename == "" {
+		fmt.Println("invalid nes file")
 		os.Exit(1)
 	}
-	progROM, charROM, err := utils.LoadFCROM(args[0])
+	if *d {
+		logger.IsDebugMode = true
+	}
+	progROM, charROM, err := utils.LoadFCROM(*filename)
 	if err != nil {
 		log.Fatalln(err)
 	}

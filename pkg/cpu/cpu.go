@@ -1,8 +1,7 @@
 package cpu
 
 import (
-	"log"
-
+	"github.com/b1018043/fc-emu/pkg/logger"
 	"github.com/b1018043/fc-emu/pkg/ppu"
 	"github.com/b1018043/fc-emu/pkg/utils"
 )
@@ -348,7 +347,7 @@ func (c *CPU) detectAddress(mode int) uint16 {
 	case modeZeroPageY:
 		return uint16(c.getMemoryValue(c.PC)) + uint16(c.Y)
 	default:
-		log.Fatalf("unknown operation mode %d, c.PC=0x%x\n", mode, c.PC-1)
+		logger.DebugLog(logger.FATAL, "unknown operation mode %d, c.PC=0x%x\n", mode, c.PC-1)
 	}
 	return 1
 }
@@ -370,14 +369,14 @@ func (c *CPU) Run() int {
 		}
 	case NONE:
 	default:
-		log.Fatalf("unknown interrupt: %d\n", c.Interrupt)
+		logger.DebugLog(logger.FATAL, "unknown interrupt: %d\n", c.Interrupt)
 	}
 	opecode := c.getMemoryValue(c.PC)
-	log.Printf("PC: %x, opecode: %d, size: %d, name: %s", c.PC, opecode, operation_sizes[opecode], operation_names[opecode])
+	logger.DebugLog(logger.PRINT, "PC: %x, opecode: %d, size: %d, name: %s", c.PC, opecode, operation_sizes[opecode], operation_names[opecode])
 	c.PC++
 	address := c.detectAddress(operation_modes[opecode])
 	c.PC += uint16(operation_sizes[opecode] - 1)
-	log.Printf("address: 0x%04x\n", address)
+	logger.DebugLog(logger.PRINT, "address: 0x%04x\n", address)
 	c.exec(opecode, address)
 	// log.Printf("after PC: %x", c.PC)
 	return operation_cycles[opecode]
@@ -398,7 +397,7 @@ func (c *CPU) setMemoryValue(address uint16, val byte) {
 			// もし、他のレジスタへの書き込みも行いたい場合には、初めにPPUのレジスタ用のスライスを
 			// 初期化するところから実装を始めるのが吉
 			// c.PPU.Registers[address-0x2000] = val
-			log.Printf("address: 0x%04x, val: 0x%02x\n", address, val)
+			logger.DebugLog(logger.PRINT, "address: 0x%04x, val: 0x%02x\n", address, val)
 		}
 	} else {
 		c.MemoryMap[address] = val
@@ -682,7 +681,7 @@ func (c *CPU) exec(opecode byte, address uint16) {
 		// nothing to do
 	default:
 		if operation_names[opecode] != "NONE" {
-			log.Printf("%s operation called, but not implemented.\n", operation_names[opecode])
+			logger.DebugLog(logger.PRINT, "%s operation called, but not implemented.\n", operation_names[opecode])
 		}
 	}
 }
