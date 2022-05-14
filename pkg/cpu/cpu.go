@@ -289,9 +289,10 @@ func (c *CPU) SetZN(val uint8) {
 
 func (c *CPU) Reset() {
 	newPC := c.getAddress(0xfffc)
-	if newPC == 0x0000 {
-		newPC = 0x8000
-	}
+	logger.DebugLog(logger.PRINT, "newPC: 0x%04x\n", newPC)
+	// if newPC == 0x0000 {
+	// 	newPC = 0x8000
+	// }
 
 	c.Registers = Registers{
 		A: 0x00,
@@ -415,6 +416,10 @@ func (c *CPU) setMemoryValue(address uint16, val byte) {
 		// log.Printf("address: 0x%x\n", address)
 		switch {
 		// TODO: remove magic number
+		case address == 0x2003:
+			c.PPU.SetSpriteRAMAddress(val)
+		case address == 0x2004:
+			c.PPU.SetSpriteRAM(val)
 		case address == 0x2006:
 			c.PPU.SetAddress(val)
 		case address == 0x2007:
@@ -434,6 +439,8 @@ func (c *CPU) setMemoryValue(address uint16, val byte) {
 func (c *CPU) getMemoryValue(address uint16) byte {
 	if address >= 0x2000 && address < 0x2008 {
 		switch {
+		case address == 0x2004:
+			return c.PPU.GetSpriteRAM()
 		case address == 0x2007:
 			return c.PPU.GetData()
 		default:

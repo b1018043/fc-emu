@@ -34,6 +34,8 @@ type PPU struct {
 	addressBuffer []byte
 	PaletteRAM    []byte
 	IsVBlank      bool
+	SpriteRAM     [0xff + 1]byte
+	spriteAddress byte
 }
 
 func NewPPU(charROM []byte) *PPU {
@@ -44,6 +46,7 @@ func NewPPU(charROM []byte) *PPU {
 		charROM:       charROM,
 		Background:    make([]BackgroundContent, 30*32),
 		addressBuffer: make([]byte, 0, 2),
+		SpriteRAM:     [0xff + 1]byte{},
 	}
 }
 
@@ -154,11 +157,7 @@ func (p *PPU) SetData(val byte) {
 	p.setAddress(p.getAddress() + 1)
 }
 
-var c = 0
-
 func (p *PPU) SetAddress(addr byte) {
-	c++
-	logger.DebugLog(logger.PRINT, "count: %d\n", c)
 	if len(p.addressBuffer) >= 2 {
 		p.addressBuffer = p.addressBuffer[:0]
 	}
@@ -166,4 +165,19 @@ func (p *PPU) SetAddress(addr byte) {
 	if len(p.addressBuffer) == 2 {
 		logger.DebugLog(logger.PRINT, "ppu access address: 0x%04x\n", p.getAddress())
 	}
+}
+
+func (p *PPU) SetSpriteRAMAddress(addr byte) {
+	p.spriteAddress = addr
+}
+
+func (p *PPU) SetSpriteRAM(val byte) {
+	p.SpriteRAM[p.spriteAddress] = val
+	p.spriteAddress++
+}
+
+func (p *PPU) GetSpriteRAM() byte {
+	addr := p.spriteAddress
+	p.spriteAddress++
+	return p.SpriteRAM[addr]
 }
