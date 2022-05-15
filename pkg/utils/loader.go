@@ -2,7 +2,9 @@ package utils
 
 import (
 	"bufio"
+	"fmt"
 	"os"
+	"reflect"
 
 	"github.com/b1018043/fc-emu/pkg/logger"
 )
@@ -31,6 +33,10 @@ func LoadFCROM(filename string) ([]byte, []byte, error) {
 	_, err = b.Read(bytes)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	if !reflect.DeepEqual(bytes[0:3], []byte("NES")) {
+		return nil, nil, fmt.Errorf("[error]: %s is not nes file", filename)
 	}
 
 	progROM, charROM := parseROMBuffer(bytes)
